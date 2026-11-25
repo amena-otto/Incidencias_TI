@@ -1,0 +1,3 @@
+import {db} from './client.js'; import {categories} from './schema.js';
+const rows=[['Marcación y asistencia',['marcación','marcacion','asistencia','entrada','salida']],['Red e internet',['internet','wifi','wi-fi','conexión','conexion','red']],['Equipos audiovisuales',['proyector','proyección','hdmi','televisor','parlante']],['Hardware',['laptop','computadora','teclado','mouse','monitor']],['Software y plataformas',['plataforma','sistema','jaguar','correo','contraseña','acceso']],['Impresoras',['impresora','imprimir','tinta']],['Otros',['soporte','incidencia']]] as const;
+for(const [name,keywords] of rows) await db.insert(categories).values({name,keywords:[...keywords]}).onConflictDoNothing(); console.log('Categorías cargadas'); process.exit(0);

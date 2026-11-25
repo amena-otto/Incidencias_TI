@@ -1,0 +1,3 @@
+export type Msg={date:Date,time:string,sender:string,text:string};
+const pats=[/^\[(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s([^:]+):\s?(.*)$/,/^(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})\s-\s([^:]+):\s?(.*)$/];
+export function parseChat(s:string):Msg[]{const out:Msg[]=[];for(const line of s.replace(/\r/g,'').split('\n')){let m:RegExpMatchArray|null=null;let p=0;for(let i=0;i<pats.length;i++){m=line.match(pats[i]);if(m){p=i;break;}}if(m){const [,d,mo,y,h,mi,who,body]=m;let yr=+y;if(yr<100)yr+=2000;out.push({date:new Date(yr,+mo-1,+d,12),time:`${h.padStart(2,'0')}:${mi}`,sender:who.trim(),text:body.trim()});}else if(out.length&&line.trim())out[out.length-1].text+='\\n'+line;}return out;}
