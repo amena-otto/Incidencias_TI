@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState } from "react";
 import { Upload, Inbox, LayoutDashboard, Search, CheckCircle2, Download, MessageSquareText, Database, AlertCircle } from "lucide-react";
 
@@ -14,6 +15,149 @@ const CATEGORIES = [
   "Operaciones · Limpieza y ambiente", "Seguridad · Salud y ambiente", "Otros · Solicitud de apoyo sin detalle",
 ];
 
+=======
+import {
+  lazy, Suspense, useEffect, useMemo, useState,
+  type ComponentType, type LazyExoticComponent,
+} from "react";
+import {
+  Cpu, Database, FileBarChart2, GraduationCap, Inbox, LayoutDashboard, LogOut, Menu,
+  Settings, ShieldCheck, Tags, Upload, Users, type LucideIcon,
+} from "lucide-react";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { LoginPage } from "./pages/LoginPage";
+import { Loading } from "./components/ui";
+
+/**
+ * Las vistas se cargan bajo demanda para no enviar Recharts ni el resto de
+ * formularios en el paquete inicial. La sesión y el login permanecen activos.
+ */
+const DashboardPage = lazy(() => import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const ImportWizardPage = lazy(() => import("./pages/ImportWizardPage").then((m) => ({ default: m.ImportWizardPage })));
+const IncidenciasPage = lazy(() => import("./pages/IncidenciasPage").then((m) => ({ default: m.IncidenciasPage })));
+const DocentesPage = lazy(() => import("./pages/DocentesPage").then((m) => ({ default: m.DocentesPage })));
+const CategoriasPage = lazy(() => import("./pages/CategoriasPage").then((m) => ({ default: m.CategoriasPage })));
+const ReportesPage = lazy(() => import("./pages/ReportesPage").then((m) => ({ default: m.ReportesPage })));
+const UsuariosPage = lazy(() => import("./pages/UsuariosPage").then((m) => ({ default: m.UsuariosPage })));
+const ConfiguracionPage = lazy(() => import("./pages/ConfiguracionPage").then((m) => ({ default: m.ConfiguracionPage })));
+const ClasificadorPage = lazy(() => import("./pages/ClasificadorPage").then((m) => ({ default: m.ClasificadorPage })));
+
+type PageId = "dashboard" | "import" | "incidents" | "teachers" | "categories" | "reports" | "users" | "config" | "classifier";
+
+type NavItem = {
+  id: PageId;
+  label: string;
+  icon: LucideIcon;
+  permission?: string;
+  component: ComponentType | LazyExoticComponent<ComponentType>;
+};
+
+const NAV: NavItem[] = [
+  { id: "dashboard", label: "Panel", icon: LayoutDashboard, permission: "incidents:read", component: DashboardPage },
+  { id: "import", label: "Importar chat", icon: Upload, permission: "import", component: ImportWizardPage },
+  { id: "incidents", label: "Incidencias", icon: Inbox, permission: "incidents:read", component: IncidenciasPage },
+  { id: "teachers", label: "Docentes", icon: GraduationCap, component: DocentesPage },
+  { id: "categories", label: "Categorías", icon: Tags, component: CategoriasPage },
+  { id: "reports", label: "Reportes", icon: FileBarChart2, permission: "reports:read", component: ReportesPage },
+  { id: "users", label: "Usuarios", icon: Users, permission: "users:write", component: UsuariosPage },
+  { id: "config", label: "Configuración", icon: Settings, component: ConfiguracionPage },
+  { id: "classifier", label: "Clasificador V4", icon: Cpu, permission: "config:write", component: ClasificadorPage },
+];
+
+const TITLES: Record<PageId, { title: string; subtitle: string }> = {
+  dashboard: { title: "Panel de indicadores", subtitle: "Mesa de ayuda TI" },
+  import: { title: "Importar conversación", subtitle: "Revisión humana antes de guardar" },
+  incidents: { title: "Incidencias", subtitle: "Registros persistidos y gestionables" },
+  teachers: { title: "Docentes", subtitle: "Catálogo institucional y alias" },
+  categories: { title: "Categorías", subtitle: "Catálogo único del clasificador" },
+  reports: { title: "Reportes", subtitle: "Exportación institucional en Excel" },
+  users: { title: "Usuarios", subtitle: "Acceso nominal y RBAC" },
+  config: { title: "Configuración", subtitle: "Parámetros y estado operativo" },
+  classifier: { title: "Clasificador V4", subtitle: "Diccionario, evidencia y aprobación humana" },
+};
+
+function Shell() {
+  const { loading, authenticated, user, logout, can } = useAuth();
+  const [active, setActive] = useState<PageId>("dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const visible = useMemo(() => NAV.filter((item) => !item.permission || can(item.permission)), [can]);
+
+  useEffect(() => {
+    if (!visible.some((item) => item.id === active)) setActive(visible[0]?.id ?? "dashboard");
+  }, [visible, active]);
+
+  if (loading) {
+    return <div className="app-loading"><Loading label="Verificando sesión…" /></div>;
+  }
+  if (!authenticated) return <LoginPage />;
+
+  const current = visible.find((item) => item.id === active) ?? visible[0];
+  const Page = current?.component ?? DashboardPage;
+  const heading = TITLES[current?.id ?? "dashboard"];
+
+  async function signOut() {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  return (
+    <div className="layout">
+      <aside className={menuOpen ? "sidebar open" : "sidebar"}>
+        <div className="brand">
+          <span className="brand-mark">◈</span>
+          <div><strong>TI SmartDesk</strong><small>Mesa de ayuda institucional</small></div>
+        </div>
+        <nav>
+          {visible.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.id} className={active === item.id ? "nav-item active" : "nav-item"}
+                onClick={() => { setActive(item.id); setMenuOpen(false); }}>
+                <Icon size={17} /> {item.label}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="sidebar-foot">
+          <p><ShieldCheck size={14} /> Acceso nominal · sesión HttpOnly</p>
+          <p><Database size={14} /> PostgreSQL · sin IA de pago</p>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="app-header">
+          <button className="icon-btn menu-toggle" aria-label="Abrir menú" onClick={() => setMenuOpen((value) => !value)}><Menu size={20} /></button>
+          <div>
+            <small>{heading.subtitle.toUpperCase()}</small>
+            <h1>{heading.title}</h1>
+          </div>
+          <div className="header-right">
+            <div className="user-chip">
+              <span className="avatar">{user?.fullName.slice(0, 1).toUpperCase() ?? "U"}</span>
+              <div><strong>{user?.fullName}</strong><small>{user?.role}</small></div>
+            </div>
+            <button className="icon-btn" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void signOut()} disabled={loggingOut}>
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
+        <div className="page-content">
+          <Suspense fallback={<Loading label="Cargando vista…" />}>
+            <Page />
+          </Suspense>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+>>>>>>> Stashed changes
 export default function App() {
   const [tab, setTab] = useState("import");
   const [text, setText] = useState("");

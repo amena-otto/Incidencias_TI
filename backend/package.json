@@ -5,6 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+<<<<<<< Updated upstream
+=======
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/tests/run.ts",
+    "eval:v4": "tsx scripts/eval-v4.ts",
+    "test:integration": "node scripts/integration-check.cjs",
+>>>>>>> Stashed changes
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
