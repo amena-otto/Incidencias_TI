@@ -65,3 +65,51 @@ export const incidentHistory = pgTable("incident_history", {
  previousValue:jsonb("previous_value"), newValue:jsonb("new_value"), notes:text("notes"),
  createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
 },t=>({incidentIdx:index("incident_history_incident_idx").on(t.incidentId)}));
+
+/**
+ * V4: diccionario, retroalimentación y versiones. Las tablas sólo existen
+ * después de aplicar la migración 0003; el clasificador funciona con seed
+ * en memoria mientras tanto. No se aplica DDL automáticamente.
+ */
+export const classifierConcepts = pgTable("classifier_concepts", {
+ id:uuid("id").defaultRandom().primaryKey(), conceptKey:varchar("concept_key",{length:120}).notNull().unique(),
+ category:varchar("category",{length:120}).notNull(), name:varchar("name",{length:180}).notNull(),
+ description:text("description").notNull(), synonyms:text("synonyms").array().notNull().default([]),
+ expressions:text("expressions").array().notNull().default([]), variants:text("variants").array().notNull().default([]),
+ abbreviations:text("abbreviations").array().notNull().default([]), related:text("related").array().notNull().default([]),
+ negatives:text("negatives").array().notNull().default([]), weight:integer("weight").notNull().default(1),
+ priority:integer("priority").notNull().default(1), active:boolean("active").notNull().default(true),
+ updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+ createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+ version:varchar("version",{length:40}).notNull(), updatedBy:uuid("updated_by").references(()=>profiles.id,{onDelete:"set null"})
+},t=>({categoryIdx:index("classifier_concepts_category_idx").on(t.category),activeIdx:index("classifier_concepts_active_idx").on(t.active)}));
+
+export const classifierFeedback = pgTable("classifier_feedback", {
+ id:uuid("id").defaultRandom().primaryKey(), candidateId:varchar("candidate_id",{length:96}),
+ originalText:text("original_text").notNull(), originalHash:varchar("original_hash",{length:64}).notNull(),
+ suggestedCategory:varchar("suggested_category",{length:120}).notNull(), correctedCategory:varchar("corrected_category",{length:120}).notNull(),
+ reason:text("reason").notNull().default(""), concepts:jsonb("concepts"), ruleApplied:text("rule_applied"),
+ reviewerId:uuid("reviewer_id").references(()=>profiles.id,{onDelete:"set null"}),
+ reviewerName:varchar("reviewer_name",{length:180}).notNull().default(""),
+ reviewedAt:timestamp("reviewed_at",{withTimezone:true}).defaultNow().notNull(),
+ classifierVersion:varchar("classifier_version",{length:40}).notNull(), dictionaryVersion:varchar("dictionary_version",{length:40}).notNull(),
+ importId:uuid("import_id").references(()=>imports.id,{onDelete:"set null"})
+},t=>({reviewedIdx:index("classifier_feedback_reviewed_idx").on(t.reviewedAt),reviewerIdx:index("classifier_feedback_reviewer_idx").on(t.reviewerId)}));
+
+export const classifierSuggestions = pgTable("classifier_suggestions", {
+ id:uuid("id").defaultRandom().primaryKey(), kind:varchar("kind",{length:60}).notNull(),
+ conceptKey:varchar("concept_key",{length:120}), title:varchar("title",{length:180}).notNull(),
+ payload:jsonb("payload").notNull(), evidenceCount:integer("evidence_count").notNull().default(1),
+ status:varchar("status",{length:20}).notNull().default("pendiente"),
+ notes:text("notes"), createdBy:uuid("created_by").references(()=>profiles.id,{onDelete:"set null"}),
+ resolvedBy:uuid("resolved_by").references(()=>profiles.id,{onDelete:"set null"}),
+ createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+ resolvedAt:timestamp("resolved_at",{withTimezone:true})
+},t=>({statusIdx:index("classifier_suggestions_status_idx").on(t.status)}));
+
+export const classifierRuleVersions = pgTable("classifier_rule_versions", {
+ id:uuid("id").defaultRandom().primaryKey(), version:varchar("version",{length:40}).notNull().unique(),
+ snapshot:jsonb("snapshot").notNull(), notes:text("notes"), active:boolean("active").notNull().default(false),
+ createdBy:uuid("created_by").references(()=>profiles.id,{onDelete:"set null"}),
+ createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull()
+});
